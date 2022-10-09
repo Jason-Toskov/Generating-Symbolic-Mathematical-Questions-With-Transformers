@@ -130,32 +130,24 @@ class Evaluator():
                 if verbose:
                     pass
                 print('- Generated expression:', hyp)
-                # breakpoint()
 
                 res = "OK"
                 print('integrating!\n')
                 reached_integral += 1
-                # breakpoint()
                 integral = integrate_hyp(hyp, self.env)
                 
-                # breakpoint()
                 if integral is None:
-                    # breakpoint()
                     print('timeout!')
                     integral = '____'
                 else:
-                    # breakpoint()
                     steps_out, steps_out_len = timed_get_steps(self.env, test_gen, test_gen_len)
                     if verbose:
-                        # breakpoint()
                         print('- Output functions used:', get_step_names(steps_out))
 
-                # breakpoint()
                 if step_len.item() > 2 and integral is not None:
                     step_matched = np.intersect1d(step_[1:step_len.item()-1].cpu(), steps_out)
                     percent_steps_matched_tmp = 100 * len(step_matched) / (step_len.item()-2)
                     perc_step_matched.append(percent_steps_matched_tmp)
-                    # breakpoint()
                     if verbose:
                         print('- Matched steps: ', get_step_names(step_matched))
                     print('%% steps matched: %i' %(percent_steps_matched_tmp))
@@ -172,16 +164,13 @@ class Evaluator():
                 
                 func_out, func_out_len = get_math_functions_used(self.env, torch.LongTensor(ids).unsqueeze(1))
                 if verbose:
-                    # breakpoint()
                     func_print = func_out.squeeze().tolist()
                     if type(func_print) == int:
                         func_print = [func_print] 
                     print('- Output functions used:', get_func_names(self.env, func_print))
 
-                # breakpoint()
                 # TODO: may want to seperate this into checking matches for both functions and steps seperately
                 # TODO: currently if there are no functions to matcch nothing special happens, need to account for that
-                # breakpoint()
                 if func_len.item() > 1:
                     token_matched = np.intersect1d(func[1:func_len.item()+1].cpu(), func_out[1:,:])
                     percent_tokens_matched_tmp = 100 * len(token_matched) / (func_len.item()-1)

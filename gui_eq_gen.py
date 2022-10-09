@@ -18,6 +18,7 @@ from param_handler import get_parser, set_params
 from envs import build_env
 from models.constructor import build_models
 from eq_parse_helper import STEP_TYPES, get_math_functions_used, get_steps_used, get_step_names, get_func_names
+from eval_tools.metrics import get_overlap_and_exclusive, get_jaccard_idx, get_prec_rec_f1
 
 class AllFrames(Enum):
     HOME = 1
@@ -32,6 +33,29 @@ class CheckboxColour(Enum):
     RED = 'red'
     GREEN = 'green'
     YELLOW = 'yellow'
+
+def get_metrics(target, prediction, empty = False):
+
+    if empty:
+        matched = extra = missed = []
+        jac_idx = precision = recall = f1 = 0
+    else:
+        matched, extra, missed = get_overlap_and_exclusive(target, prediction)
+        jac_idx = get_jaccard_idx(set(target), set(prediction))
+        precision, recall, f1 = get_prec_rec_f1(target, prediction)
+        
+
+    metrics_dict = {
+        'matched_list': matched,
+        'extra_list': extra,
+        'missed_list': missed,
+        'jaccard_index': jac_idx,
+        'precision': precision,
+        'recall': recall,
+        'f1_score': f1
+    }
+
+    return metrics_dict
 
 @timeout(5)
 def integrate_hyp(hyp, env):
@@ -221,51 +245,67 @@ class GenerateFrame(tk.Frame):
                 # Get steps used
                 steps_out, steps_out_len = timed_get_steps(self.controller.env, test_gen, test_gen_len)
 
-                if len(step_input_list) > 0:
-                    step_matched = np.intersect1d(torch.LongTensor(step_input_list), steps_out)
-                    percent_steps_matched = round(100 * len(step_matched) / len(step_input_list))
-                    extra_steps = np.setxor1d(step_matched, steps_out)
-                    missed_steps = np.setxor1d(step_matched, torch.LongTensor(step_input_list))
-                else:
-                    step_matched = []
-                    extra_steps = []
-                    missed_steps = []
-                    percent_steps_matched = 0
+                steps_metrics_dict = get_metrics(step_input_list, steps_out.tolist(), empty = len(step_input_list) <= 0)
+                # if len(step_input_list) > 0:
+                #     get_metrics(target, prediction, empty = False)
+                #     step_matched, extra_steps, missed_steps = get_overlap_and_exclusive(step_input_list, steps_out)
+                #     # step_matched = np.intersect1d(torch.LongTensor(step_input_list), steps_out)
+                #     percent_steps_matched = round(100 * len(step_matched) / len(step_input_list))
+                #     # extra_steps = np.setxor1d(step_matched, steps_out)
+                #     # missed_steps = np.setxor1d(step_matched, torch.LongTensor(step_input_list))
+                #     # Jaccard index 
+                #     jac_idx = get_jaccard_idx(step_input_list, steps_out)
+                #     precision_step, recall_step, f1_step = get_prec_rec_f1(step_input_list, steps_out)
+                    
+                # else:
+                #     step_matched = []
+                #     extra_steps = []
+                #     missed_steps = []
+                #     percent_steps_matched = 0
                 
-                for idx in step_matched:
+                for idx in steps_metrics_dict['matched_list']:
                     output_colour[idx-prop_frame.step_skip_idx] = CheckboxColour.GREEN
-                for idx in extra_steps:
+                for idx in steps_metrics_dict['extra_list']:
                     output_colour[idx-prop_frame.step_skip_idx] = CheckboxColour.YELLOW
-                for idx in missed_steps:
+                for idx in steps_metrics_dict['missed_list']:
                     output_colour[idx-prop_frame.step_skip_idx] = CheckboxColour.RED
                 
-                self.controller.eq_data['step_matched'] = step_matched
-                self.controller.eq_data['percent_step_matched'] = percent_steps_matched    
+                self.controller.eq_data['step_metrics'] = steps_metrics_dict
+                # self.controller.eq_data['percent_step_matched'] = percent_steps_matched    
 
                 # Get functions present
                 func_out, func_out_len = get_math_functions_used(self.controller.env, torch.LongTensor(ids).unsqueeze(1))
                 
-                if len(func_input_list) > 0:
-                    token_matched = np.intersect1d(torch.LongTensor(func_input_list), func_out[1:,:])
-                    percent_tokens_matched = round(100 * len(token_matched) / len(func_input_list))
-                    extra_funcs = np.setxor1d(token_matched, func_out[1:,:])
-                    missed_funcs = np.setxor1d(token_matched, torch.LongTensor(func_input_list))
-                else:
-                    token_matched = []
-                    extra_funcs = []
-                    missed_funcs = []
-                    percent_tokens_matched = 0
-                self.controller.eq_data['token_matched'] = token_matched
-                self.controller.eq_data['percent_token_matched'] = percent_tokens_matched
+                func_metrics_dict = get_metrics(func_input_list, func_out[1:,0].tolist(), empty = len(func_input_list) <= 0)
 
-                for idx in token_matched:
+                # if len(func_input_list) > 0:
+                #     token_matched = np.intersect1d(torch.LongTensor(func_input_list), func_out[1:,:])
+                #     percent_tokens_matched = round(100 * len(token_matched) / len(func_input_list))
+                #     extra_funcs = np.setxor1d(token_matched, func_out[1:,:])
+                #     missed_funcs = np.setxor1d(token_matched, torch.LongTensor(func_input_list))
+                # else:
+                #     token_matched = []
+                #     extra_funcs = []
+                #     missed_funcs = []
+                #     percent_tokens_matched = 0
+                # self.controller.eq_data['token_matched'] = token_matched
+                # self.controller.eq_data['percent_token_matched'] = percent_tokens_matched
+
+                for idx in func_metrics_dict['matched_list']:
                     output_colour[idx-prop_frame.step_skip_idx-1] = CheckboxColour.GREEN
-                for idx in extra_funcs:
+                for idx in func_metrics_dict['extra_list']:
                     output_colour[idx-prop_frame.step_skip_idx-1] = CheckboxColour.YELLOW
-                for idx in missed_funcs:
+                for idx in func_metrics_dict['missed_list']:
                     output_colour[idx-prop_frame.step_skip_idx-1] = CheckboxColour.RED
 
+                self.controller.eq_data['func_metrics'] = func_metrics_dict
+
                 self.controller.eq_data['checkbox_colour'] = output_colour
+
+                both_input_list = step_input_list+func_input_list
+                both_out_list = steps_out.tolist()+func_out[1:,0].tolist()
+                both_metrics_dict = get_metrics(both_input_list, both_out_list, empty = len(both_input_list) <= 0)
+                self.controller.eq_data['both_metrics'] = both_metrics_dict
 
                 self.controller.current_generated_equation.set(sp.latex(hyp))
                 return
@@ -580,7 +620,6 @@ class MatchedPropertiesFrame(tk.Frame):
         for ck, colour in zip(self.all_checkboxes, self.controller.eq_data['checkbox_colour']):
             ck.configure(selectcolor=colour.value)
 
-
 class MetricsFrame(tk.Frame):
     def __init__(self, container, controller):
         super().__init__(container)
@@ -593,46 +632,106 @@ class MetricsFrame(tk.Frame):
             self,
             text = 'Equation Details',
             font = ('',20),
-        ).grid(row=0, columnspan=2, sticky='n', padx=10, pady=30)
+        ).grid(row=0, columnspan=3, sticky='n', padx=10, pady=30)
 
-        self.func_match_header = tk.Label(
+        self.matched_header = tk.Label(
             self,
-            text = r'% funcs matched:',
+            text = r'# Matched:',
             font = ('',14),
         )
-        self.func_match_header.grid(row=1, column=0, sticky='n', padx=(10,50),pady=10)
+        self.matched_header.grid(row=1, column=0, sticky='n', padx=(10,25),pady=10)
 
-        self.func_match_var = tk.StringVar()
-        self.func_match_var.set(self.controller.eq_data['percent_token_matched'])
+        self.match_var = tk.StringVar()
+        self.match_var.set(len(self.controller.eq_data['both_metrics']['matched_list']))
 
-        self.func_match_label = tk.Label(self, textvariable=self.func_match_var)
-        self.func_match_label.grid(row=2, column=0, sticky='n', padx=(10,50),pady=10)
+        self.match_label = tk.Label(self, textvariable=self.match_var)
+        self.match_label.grid(row=2, column=0, sticky='n', padx=(10,25),pady=10)
 
 
-        self.step_match_header = tk.Label(
+        self.extra_header = tk.Label(
             self,
-            text = r'% steps matched:',
+            text = r'# Extra:',
             font = ('',14),
         )
-        self.step_match_header.grid(row=1, column=1, sticky='n', padx=(50,10),pady=10)
+        self.extra_header.grid(row=1, column=1, sticky='n', padx=(25,25),pady=10)
+        self.extra_var = tk.StringVar()
+        self.extra_var.set(len(self.controller.eq_data['both_metrics']['extra_list']))
+        self.extra_label = tk.Label(self, textvariable=self.extra_var)
+        self.extra_label.grid(row=2, column=1, sticky='n', padx=(25,25),pady=10)
 
-        self.step_match_var = tk.StringVar()
-        self.step_match_var.set(self.controller.eq_data['percent_step_matched'])
+        self.missed_header = tk.Label(
+            self,
+            text = r'# Missed:',
+            font = ('',14),
+        )
+        self.missed_header.grid(row=1, column=2, sticky='n', padx=(25,10),pady=10)
+        self.missed_var = tk.StringVar()
+        self.missed_var.set(len(self.controller.eq_data['both_metrics']['missed_list']))
+        self.missed_label = tk.Label(self, textvariable=self.missed_var)
+        self.missed_label.grid(row=2, column=2, sticky='n', padx=(25,10),pady=10)
 
-        self.step_match_label = tk.Label(self, textvariable=self.step_match_var)
-        self.step_match_label.grid(row=2, column=1, sticky='n', padx=(50,10),pady=10)
+        self.precision_header = tk.Label(
+            self,
+            text = r'Precision:',
+            font = ('',14),
+        )
+        self.precision_header.grid(row=3, column=0, sticky='n', padx=(10,25),pady=10)
+        self.precision_var = tk.StringVar()
+        self.precision_var.set(round(self.controller.eq_data['both_metrics']['precision'],2))
+        self.precision_label = tk.Label(self, textvariable=self.precision_var)
+        self.precision_label.grid(row=4, column=0, sticky='n', padx=(10,25),pady=10)
+
+        self.recall_header = tk.Label(
+            self,
+            text = r'Recall:',
+            font = ('',14),
+        )
+        self.recall_header.grid(row=3, column=1, sticky='n', padx=(25,25),pady=10)
+        self.recall_var = tk.StringVar()
+        self.recall_var.set(round(self.controller.eq_data['both_metrics']['recall'],2))
+        self.recall_label = tk.Label(self, textvariable=self.recall_var)
+        self.recall_label.grid(row=4, column=1, sticky='n', padx=(25,25),pady=10)
+
+        self.f1_score_header = tk.Label(
+            self,
+            text = r'F1 score:',
+            font = ('',14),
+        )
+        self.f1_score_header.grid(row=3, column=2, sticky='n', padx=(25,10),pady=10)
+        self.f1_score_var = tk.StringVar()
+        self.f1_score_var.set(round(self.controller.eq_data['both_metrics']['f1_score'],2))
+        self.f1_score_label = tk.Label(self, textvariable=self.f1_score_var)
+        self.f1_score_label.grid(row=4, column=2, sticky='n', padx=(25,10),pady=10)
+
+        self.jaccard_header = tk.Label(
+            self,
+            text = r'Jaccard Idx:',
+            font = ('',14),
+        )
+        self.jaccard_header.grid(row=5, column=0, sticky='n', padx=(10,25),pady=10)
+        self.jaccard_var = tk.StringVar()
+        self.jaccard_var.set(round(self.controller.eq_data['both_metrics']['jaccard_index'],2))
+        self.jaccard_label = tk.Label(self, textvariable=self.jaccard_var)
+        self.jaccard_label.grid(row=6, column=0, sticky='n', padx=(10,25),pady=10)
+
 
         self.back_button = tk.Button(
             self,
             text='Back',
             command=lambda : self.controller.change_frame(AllFrames.HOME)
         )
-        self.back_button.grid(row=3, column=1, sticky='e', **options)
+        self.back_button.grid(row=7, column=2, sticky='e', **options)
 
     def update_outputs(self):
-        self.func_match_var.set(self.controller.eq_data['percent_token_matched'])
-        self.step_match_var.set(self.controller.eq_data['percent_step_matched'])
-        
+        self.match_var.set(len(self.controller.eq_data['both_metrics']['matched_list']))
+        self.extra_var.set(len(self.controller.eq_data['both_metrics']['extra_list']))
+        self.missed_var.set(len(self.controller.eq_data['both_metrics']['missed_list']))
+
+        self.precision_var.set(round(self.controller.eq_data['both_metrics']['precision'],2))
+        self.recall_var.set(round(self.controller.eq_data['both_metrics']['recall'],2))
+        self.f1_score_var.set(round(self.controller.eq_data['both_metrics']['f1_score'],2))
+
+        self.jaccard_var.set(round(self.controller.eq_data['both_metrics']['jaccard_index'],2))
 
 
 class Root(tk.Tk):
@@ -648,10 +747,9 @@ class Root(tk.Tk):
 
         self.eq_data = {
             'integral': '.',
-            'step_matched': [],
-            'percent_step_matched': 0,
-            'token_matched': [],
-            'percent_token_matched': 0,
+            'step_metrics': get_metrics([],[],empty=True),
+            'func_metrics': get_metrics([],[],empty=True),
+            'both_metrics': get_metrics([],[],empty=True),
             'checkbox_colour': []
         }
 
@@ -660,7 +758,7 @@ class Root(tk.Tk):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.geometry('950x800')
-        # self.resizable(False, False)
+        self.resizable(False, False)
         container = tk.Frame(self)
         container.grid(column=0, row=0, sticky='n')
         container.grid_rowconfigure(0, weight=1)

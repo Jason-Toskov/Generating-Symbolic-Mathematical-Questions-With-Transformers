@@ -15,14 +15,14 @@ def set_params(params):
     params.max_epoch = 100000
 
     # Model
-    params.reload_model = './fwd_bwd_ibp.pth'
+    params.reload_model = './dumped/transgan_model_best_loaded.pt'
     params.cpu = False
     params.emb_dim = 1024
     params.n_enc_layers = 6
     params.n_dec_layers = 6
     params.n_heads = 8
     params.share_inout_emb = False
-    params.model_type = model_type_enum('basic')
+    params.model_type = model_type_enum('gan')
 
     # SLURM (this is for loca GPU)
     #TODO: get rid of these being needed

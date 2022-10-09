@@ -20,7 +20,7 @@ def to_cuda(*args):
     Move tensors to CUDA.
     """
     if not CUDA:
-        return [args]
+        return [None if x is None else x for x in args]
     return [None if x is None else x.cuda() for x in args]
 
 class AttrDict(dict):
