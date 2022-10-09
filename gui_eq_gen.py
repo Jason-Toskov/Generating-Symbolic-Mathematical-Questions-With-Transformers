@@ -353,7 +353,7 @@ class PropertiesFrame(tk.Frame):
             text='Back',
             command=lambda : self.controller.change_frame(AllFrames.HOME)
         )
-        self.back_button.grid(row=max_rows_idx+3, column=3, sticky='e', **options)
+        self.back_button.grid(row=max_rows_idx+3, column=3, sticky='se', **options)
 
         self.clear_button = tk.Button(
             self,
@@ -438,7 +438,7 @@ class ModelFrame(tk.Frame):
             text='Back',
             command=lambda : self.controller.change_frame(AllFrames.HOME)
         )
-        self.back_button.grid(row=5, column=2, columnspan=2, sticky='e', **options)
+        self.back_button.grid(row=5, column=2, columnspan=2, sticky='se', **options)
     
     def load_model(self):
         self.controller.params.model_type = ModelType(self.model_type.get())
@@ -499,7 +499,7 @@ class SolutionFrame(tk.Frame):
             text='Back',
             command=lambda : self.controller.change_frame(AllFrames.HOME)
         )
-        self.back_button.grid(row=4, sticky='e', **options)
+        self.back_button.grid(row=4, sticky='se', **options)
     
     def update_outputs(self):
         self.gen_eq_var.set(r'\int{}'+self.controller.current_generated_equation.get()+'\mathrm{d}x')
@@ -582,7 +582,7 @@ class MatchedPropertiesFrame(tk.Frame):
             text='Back',
             command=lambda : self.controller.change_frame(AllFrames.HOME)
         )
-        self.back_button.grid(row=max_rows_idx+3, column=3, sticky='e', **options)
+        self.back_button.grid(row=max_rows_idx+3, column=3, sticky='se', **options)
 
         # weight_frame(self, max((i,j))+3, 1)
     
@@ -690,7 +690,7 @@ class MetricsFrame(tk.Frame):
             text='Back',
             command=lambda : self.controller.change_frame(AllFrames.HOME)
         )
-        self.back_button.grid(row=7, column=2, sticky='e', **options)
+        self.back_button.grid(row=7, column=2, sticky='se', **options)
 
     def update_outputs(self):
         self.match_var.set(len(self.controller.eq_data['both_metrics']['matched_list']))
