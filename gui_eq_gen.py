@@ -246,22 +246,6 @@ class GenerateFrame(tk.Frame):
                 steps_out, steps_out_len = timed_get_steps(self.controller.env, test_gen, test_gen_len)
 
                 steps_metrics_dict = get_metrics(step_input_list, steps_out.tolist(), empty = len(step_input_list) <= 0)
-                # if len(step_input_list) > 0:
-                #     get_metrics(target, prediction, empty = False)
-                #     step_matched, extra_steps, missed_steps = get_overlap_and_exclusive(step_input_list, steps_out)
-                #     # step_matched = np.intersect1d(torch.LongTensor(step_input_list), steps_out)
-                #     percent_steps_matched = round(100 * len(step_matched) / len(step_input_list))
-                #     # extra_steps = np.setxor1d(step_matched, steps_out)
-                #     # missed_steps = np.setxor1d(step_matched, torch.LongTensor(step_input_list))
-                #     # Jaccard index 
-                #     jac_idx = get_jaccard_idx(step_input_list, steps_out)
-                #     precision_step, recall_step, f1_step = get_prec_rec_f1(step_input_list, steps_out)
-                    
-                # else:
-                #     step_matched = []
-                #     extra_steps = []
-                #     missed_steps = []
-                #     percent_steps_matched = 0
                 
                 for idx in steps_metrics_dict['matched_list']:
                     output_colour[idx-prop_frame.step_skip_idx] = CheckboxColour.GREEN
@@ -271,25 +255,11 @@ class GenerateFrame(tk.Frame):
                     output_colour[idx-prop_frame.step_skip_idx] = CheckboxColour.RED
                 
                 self.controller.eq_data['step_metrics'] = steps_metrics_dict
-                # self.controller.eq_data['percent_step_matched'] = percent_steps_matched    
 
                 # Get functions present
                 func_out, func_out_len = get_math_functions_used(self.controller.env, torch.LongTensor(ids).unsqueeze(1))
                 
                 func_metrics_dict = get_metrics(func_input_list, func_out[1:,0].tolist(), empty = len(func_input_list) <= 0)
-
-                # if len(func_input_list) > 0:
-                #     token_matched = np.intersect1d(torch.LongTensor(func_input_list), func_out[1:,:])
-                #     percent_tokens_matched = round(100 * len(token_matched) / len(func_input_list))
-                #     extra_funcs = np.setxor1d(token_matched, func_out[1:,:])
-                #     missed_funcs = np.setxor1d(token_matched, torch.LongTensor(func_input_list))
-                # else:
-                #     token_matched = []
-                #     extra_funcs = []
-                #     missed_funcs = []
-                #     percent_tokens_matched = 0
-                # self.controller.eq_data['token_matched'] = token_matched
-                # self.controller.eq_data['percent_token_matched'] = percent_tokens_matched
 
                 for idx in func_metrics_dict['matched_list']:
                     output_colour[idx-prop_frame.step_skip_idx-1] = CheckboxColour.GREEN
